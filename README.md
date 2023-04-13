@@ -9,8 +9,7 @@ The scene flow estimation aims at achieving high-quality point-wise motion field
 
 #### Training and Evaluation
 
-To train the model, simply execute the shell script `command_train.sh`. Batch size, learning rate etc are adjustable. The model used for training is `model_concat_upsa.py`.
-
+To train the model, simply execute the shell script `cmd.sh`. Batch size, learning rate etc are adjustable. 
 ```
 sh cmd.sh
 ```
