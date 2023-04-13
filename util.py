@@ -819,190 +819,6 @@ class SymmetricTransitionDownBlockPaperv3(nn.Module):
 
         return [p, y, o, idx]
 
-
-'''
-基于估计的场景流信息在目标域搜索对应的K个邻域信息；先根据参考点的邻域计算一个平均的相关参数，作为稀疏阈值；然后将邻域点按照不同的分辨率Voxelize，构造出不同分辨率级别的VFE特征，依次利用关联操作以及稀疏阈值选择操作，结合scatter操作concat到一起，通过进行加权或者cnn+maxpooling/GRU对应的权重信息；组合不同级别的特信息；分别输出对应的权重和用于估计遮挡信息的掩膜特征。
-Method 1: 参考SAC方法构建motion featrue 的选择方法
-Method 1: 参考PointMixer方法构建Cost Volume
-'''
-# class CostVolumeNet(nn.Module):
-#     def __init__(self, nsample, in_channel, mid_channel, share_channel, out_channel, use_mask=False,
-#         intraLayer='PointMixerIntraSetLayer',
-#         interLayer='PointMixerInterSetLayer',
-#         transup='SymmetricTransitionUpBlock', 
-#         transdown='TransitionDownBlock'):
-#         super().__init__()
-#         self.nsample = nsample
-#         self.mid_channel = mid_channel
-#         self.share_channel = share_channel
-#         self.out_channel = out_channel
-#         if use_mask:
-#             self.channelMixMLPs01 = nn.Sequential( # input.shape = [N, K, C]
-#                     nn.Linear(1+3+in_channel*2, nsample),
-#                     nn.ReLU(inplace=True),
-#                     BilinearFeedForward(nsample, nsample, nsample))
-#         else:
-#             self.channelMixMLPs01 = nn.Sequential( # input.shape = [N, K, C]
-#                     nn.Linear(3+in_channel*2, nsample),
-#                     nn.ReLU(inplace=True),
-#                     BilinearFeedForward(nsample, nsample, nsample))
-        
-#         self.channelMixMLPs01_2 = nn.Sequential( # input.shape = [N, K, C]
-#                 nn.Linear(3+out_channel*2, nsample),
-#                 nn.ReLU(inplace=True),
-#                 BilinearFeedForward(nsample, nsample, nsample))
-        
-#         self.linear_p = nn.Sequential( # input.shape = [N, K, C]
-#             nn.Linear(3, out_channel//2),
-#             nn.Sequential(
-#                 Rearrange('n k c -> n c k'),
-#                 nn.BatchNorm1d(out_channel//2),
-#                 Rearrange('n c k -> n k c')),
-#             nn.ReLU(inplace=True), 
-#             nn.Linear(out_channel//2, out_channel))
-        
-#         self.shrink_p = nn.Sequential(
-#             Rearrange('n k (a b) -> n k a b', b=nsample),
-#             Reduce('n k a b -> n k b', 'sum', b=nsample))
-        
-#         self.channelMixMLPs02 = nn.Sequential( # input.shape = [N, K, C]
-#             Rearrange('n k c -> n c k'),
-#             nn.Conv1d(nsample+nsample, mid_channel, kernel_size=1, bias=False),
-#             nn.BatchNorm1d(mid_channel), 
-#             nn.ReLU(inplace=True),
-#             nn.Conv1d(mid_channel, mid_channel//share_channel, kernel_size=1, bias=False),
-#             nn.BatchNorm1d(mid_channel//share_channel),
-#             nn.ReLU(inplace=True),
-#             nn.Conv1d(mid_channel//share_channel, out_channel//share_channel, kernel_size=1),
-#             Rearrange('n c k -> n k c'))
-#         self.channelMixMLPs02_2 = nn.Sequential( # input.shape = [N, K, C]
-#             Rearrange('n k c -> n c k'),
-#             nn.Conv1d(nsample+nsample, mid_channel, kernel_size=1, bias=False),
-#             nn.BatchNorm1d(mid_channel), 
-#             nn.ReLU(inplace=True),
-#             nn.Conv1d(mid_channel, mid_channel//share_channel, kernel_size=1, bias=False),
-#             nn.BatchNorm1d(mid_channel//share_channel),
-#             nn.ReLU(inplace=True),
-#             nn.Conv1d(mid_channel//share_channel, out_channel//share_channel, kernel_size=1),
-#             Rearrange('n c k -> n k c'))
-#         # self.channelMixMLPs02_2 = nn.Linear(out_channel//share_channel, 1)
-#         if use_mask:
-#             self.channelMixMLPs03 = nn.Linear(1+3+in_channel*2, out_channel)
-#         else:
-#             self.channelMixMLPs03 = nn.Linear(3+in_channel*2, out_channel)
-#         self.channelMixMLPs03_2 = nn.Linear(3+out_channel*2, out_channel)
-        
-#         self.softmax = nn.Softmax(dim=1)
-    
-#     def get_patch_features(self, pc1, pc2, channelMixMLPs01, channelMixMLPs02, channelMixMLPs03,  sf=None, use_cross_att=True):
-#         '''
-#         Input:
-#         (dense) pc1: [pos:[n, 3]; feats:[n, c]; cnt_num:[b*n]]
-#         (sparse) pc2: [pos:[m, 3]; feats:[m, c]; cnt_num:[b2*n]]
-#         s_sf: [n,3], cnt_num: [b]
-#         '''
-#         p1, feats1, cnt_num1 = pc1
-#         p2, feats2, cnt_num2 = pc2 
-#         # B,N = pos1.shape
-#         # b, m_p, _ = pos2.size()
-#         if use_cross_att and sf != None:
-#             pos_feats_knn, knn_idx = pointops.queryandgroup(
-#                 self.nsample, p2, p1+sf, feats2, None, cnt_num2, cnt_num1, use_xyz=True, return_idx=True)  # (n, k, 3+c)
-#         else:
-#             pos_feats_knn, knn_idx = pointops.queryandgroup(
-#                 self.nsample, p2, p1, feats2, None, cnt_num2, cnt_num1, use_xyz=True, return_idx=True)  # (n, k, 3+c)
-#         pos_diff = pos_feats_knn[:, :, 0:3]
-#         feats1_groupped = feats1.view(len(p1), 1, -1).repeat(1, self.nsample, 1)
-        
-#         new_feats = torch.cat([pos_feats_knn, feats1_groupped], dim=-1)
-#         energy = channelMixMLPs01(new_feats) # (n, k, k)
-        
-#         p_embed = self.linear_p(pos_diff) # (n, k, out_planes)
-#         p_embed_shrink = self.shrink_p(p_embed) # (n, k, k)
-
-#         energy = torch.cat([energy, p_embed_shrink], dim=-1)
-#         energy = channelMixMLPs02(energy) # (n, k, out_planes/share_planes)
-#         w = self.softmax(energy)
-#         if use_cross_att: # and sf != None
-#             new_feats_v = channelMixMLPs03(new_feats)  # (n, in_planes) -> (n, k)
-#             n = knn_idx.shape[0]
-#             # knn_idx_flatten = knn_idx.flatten()
-#             # new_feats_v  = new_feats_v[knn_idx_flatten, :].view(n, self.nsample, -1)
-#             n, nsample, out_planes = new_feats_v.shape
-#             new_feats = (new_feats_v + p_embed).view(n, self.nsample, self.share_channel, out_planes//self.share_channel)
-#             # new_feats = new_feats_v.view(n, self.nsample, self.share_channel, out_planes//self.share_channel)
-#             new_feats = (new_feats * w.unsqueeze(2)).squeeze(2)
-            
-#             # if mask != None:
-#             #     mask_groupped = mask[knn_idx.flatten(), :].view(n, self.nsample, -1).repeat(1,1,self.out_channel)
-#             #     new_feats = mask_groupped * new_feats
-#             new_feats = new_feats.reshape(n, nsample, out_planes)   
-            
-#         if use_cross_att:
-#             new_feats = new_feats.sum(1)
-#             return new_feats, pos_feats_knn, w
-#         else:
-#             # return knn_idx, new_feats, pos_feats_knn, w
-#             return knn_idx, pos_feats_knn, w
-            
-
-#     def forward(self, pc1, pc2, sf=None, mask=None):
-#         '''
-#         Input:
-#         (dense) pc1: [pos:[n, 3]; feats:[n, c]; cnt_num:[b*n]]
-#         (sparse) pc2: [pos:[m, 3]; feats:[m, c]; cnt_num:[b2*n]]
-#         s_sf: [n,3], cnt_num: [b]
-#         '''
-#         p1, feats1, cnt_num1 = pc1
-#         p2, feats2, cnt_num2 = pc2 
-#         B = None
-#         if len(p1.shape) == 3:
-#             B = p1.shape[0]
-#             p1 = p1.permute(0,2,1).contiguous().view(-1, p1.shape[1])
-#             feats1 = feats1.permute(0,2,1).contiguous().view(-1, feats1.shape[1])
-#             if mask != None:
-#                 feats1 = torch.cat([feats1, mask], dim=-1)
-#             pc1 = [p1, feats1, cnt_num1]
-        
-#         if len(p2.shape) == 3:
-#             p2 = p2.permute(0,2,1).contiguous().view(-1, p2.shape[1])
-#             feats2 = feats2.permute(0,2,1).contiguous().view(-1, feats2.shape[1])
-#             pc2 = [p2, feats2, cnt_num2]
-            
-#         # B,N = pos1.shape
-#         # b, m_p, _ = pos2.size()
-        
-#         if sf == None:
-#             sf = torch.zeros_like(p1)
-#             # sf_feats = None
-#         else:
-#             sf = sf.permute(0,2,1).contiguous().view(-1, sf.shape[1])
-            
-#         N = p1.shape[0]
-#         inter_feats_fwd, _, _ = self.get_patch_features(pc1, pc2, channelMixMLPs01=self.channelMixMLPs01, channelMixMLPs02=self.channelMixMLPs02, channelMixMLPs03=self.channelMixMLPs03, sf=sf, use_cross_att=True)
-#         if sf!=None:
-#             pc1w = [p1+sf, feats1, cnt_num1]
-#         else:
-#             pc1w = pc1
-#         inter_feats_bwd, _, _ = self.get_patch_features(pc2, pc1w, channelMixMLPs01=self.channelMixMLPs01, channelMixMLPs02=self.channelMixMLPs02, channelMixMLPs03=self.channelMixMLPs03, use_cross_att=True)
-#         pc1 = [p1, inter_feats_fwd, cnt_num1]
-#         pc2 = [p2, inter_feats_bwd, cnt_num2]
-#         # intra_knn_idx, intra_groupped_feats, w = self.get_patch_features(pc1, pc1, use_cross_att=False)
-#         patch_to_patch_cost, _, _ = self.get_patch_features(pc1, pc2, channelMixMLPs01=self.channelMixMLPs01_2, channelMixMLPs02=self.channelMixMLPs02_2, channelMixMLPs03=self.channelMixMLPs03_2, sf=sf, use_cross_att=True)
-#         # pc1 = [p1, feats1, cnt_num1]
-#         # if mask != None:
-#         #     pc1_2 = [p1, feats1[:,:-1], cnt_num1]
-#         # else:
-#         #     pc1_2 = pc1
-#         # intra_knn_idx, _, w = self.get_patch_features(pc1_2, pc1, channelMixMLPs01=self.channelMixMLPs01, channelMixMLPs02=self.channelMixMLPs02, channelMixMLPs03=self.channelMixMLPs03, use_cross_att=False)
-
-#         # grouped_point_to_patch_cost = inter_feats[intra_knn_idx.flatten(), :].view(N, self.nsample, -1)
-#         # patch_to_patch_cost = (w * grouped_point_to_patch_cost).sum(1)
-
-#         patch_to_patch_cost = patch_to_patch_cost.view(B,-1, patch_to_patch_cost.shape[-1]).permute(0,2,1).contiguous()
-#         inter_feats_fwd = inter_feats_fwd.view(B,-1, inter_feats_fwd.shape[-1]).permute(0,2,1).contiguous()
-#         inter_feats_bwd = inter_feats_bwd.view(B,-1, inter_feats_bwd.shape[-1]).permute(0,2,1).contiguous()
-#         return patch_to_patch_cost, inter_feats_fwd, inter_feats_bwd
         
 class CostVolumeNet(nn.Module):
     def __init__(self, nsample, in_channel, mid_channel, share_channel, out_channel, use_mask=False,
@@ -1365,9 +1181,7 @@ class SceneFlowRegressor(nn.Module):
         return inter_feats_fwd, inter_feats_bwd, sf_feat, sf
 
     
-'''
-根据特征相关性以及遮挡区域掩膜实现场景流上采样估计
-'''
+
 class SceneFlowEstimatorPointConv2(nn.Module):
     def __init__(self, feat_ch, cost_ch, flow_ch = 3, channels = [128, 128], mlp = [128, 64], share_planes=8, neighbors = 9, clamp = [-200, 200], use_leaky = True):
         super(SceneFlowEstimatorPointConv2, self).__init__()
@@ -1439,12 +1253,6 @@ class SceneFlowEstimatorPointConv2(nn.Module):
         return new_points, re_flow.clamp(self.clamp[0], self.clamp[1])
  
 
-
-
-'''
-方案1：利用FPN网络进行上采样到指定层信息，进行多尺度特征信息组合；
-方案2：利用PV-RAFT网络实现VFE的多尺度特征信息组合；
-'''
 class OcclusisonEstiamtionNet(nn.Module):
     def __init__(self, nsample, voxel_size, resolution, in_channels, num_levels=2, out_channel=256, transup='SymmetricTransitionUpBlock'):
         super(OcclusisonEstiamtionNet, self).__init__()
@@ -1977,9 +1785,7 @@ class Conv1d(nn.Module):
         x = self.composed_module(x)
         return x
     
-'''
-根据特征相关性以及遮挡区域掩膜实现场景流上采样估计
-'''
+
 class SceneFlowEstimatorPointConv(nn.Module):
     def __init__(self, feat_ch, cost_ch, flow_ch = 3, channels = [128, 128], mlp = [128, 64], share_planes=8, neighbors = 9, clamp = [-200, 200], use_leaky = True):
         super(SceneFlowEstimatorPointConv, self).__init__()
