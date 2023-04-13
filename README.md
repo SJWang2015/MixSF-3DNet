@@ -14,7 +14,7 @@ To train the model, simply execute the shell script `cmd.sh`. Batch size, learni
 sh cmd.sh
 ```
 
-To evaluate the model, simply execute the shell script `command_evaluate_flyingthings.sh`.
+To evaluate the model, simply execute the shell script `cmd_eval_ft3d.sh`.
 
 ```
 sh cmd_eval_ft3d.sh
