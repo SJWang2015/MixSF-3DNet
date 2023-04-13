@@ -1,5 +1,5 @@
 # MixSF-3DNet
-This code is for the work: Mixer-based Symmetric Scene Flow Estimation from 3D Point Clouds (MixSF-3DNet).
+This code is for the work: Mixer-based Symmetric Scene Flow Estimation from 3D Point Clouds (MixSF-3DNet). 
 
 <img src="https://github.com/SJWang2015/MixSF-3DNet/blob/main/media/poster-v3.png" width="60%">
 
@@ -9,7 +9,7 @@ The scene flow estimation aims at achieving high-quality point-wise motion field
 
 #### Training and Evaluation
 
-To train the model, simply execute the shell script `cmd.sh`. Batch size, learning rate etc are adjustable. 
+For example, To train the model with FlylingThing3D dataset, simply execute the shell script `cmd.sh`. Batch size, learning rate etc are adjustable. 
 ```
 sh cmd.sh
 ```
