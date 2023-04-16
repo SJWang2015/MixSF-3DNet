@@ -145,11 +145,6 @@ def test_one_epoch(args, net, test_loader, rf_flow_factor, flow_factor, occ_fact
         for i, data in enumerate(test_loader):
             pc1 = data['sequence'][0]
             pc2 = data['sequence'][1]
-            if use_rgb:
-                feats1 = data['sequence'][0]
-                feats2 = data['sequence'][1]
-                feats1 = feats1.cuda().squeeze(1).transpose(2, 1).contiguous()
-                feats2 = feats2.cuda().squeeze(1).transpose(2, 1).contiguous()
             mask1 = data['ground_truth'][0]
             flow = data['ground_truth'][1]
             pc1 = pc1.cuda().squeeze(1).transpose(2, 1).contiguous()
@@ -174,11 +169,11 @@ def test_one_epoch(args, net, test_loader, rf_flow_factor, flow_factor, occ_fact
                     points1_perm = pc1[:, :, perm]
                     points2_perm = pc2[:, :, perm]
                     if use_rgb:
-                        feats1_perm = feats1[:, :, perm]
-                        feats2_perm = feats2[:, :, perm]
-                        pred_rf_flows, pred_flows, pred_mask, fps_pc1_idxs = net(points1_perm, points2_perm)
+                        feats1_perm = pc1[:, :, perm]
+                        feats2_perm = pc2[:, :, perm]
+                        pred_rf_flows, pred_flows, fps_pc1_idxs = net(points1_perm, points2_perm)
                     else:
-                        pred_rf_flows, pred_flows, pred_mask, fps_pc1_idxs = net(points1_perm, points2_perm, feats1_perm, feats2_perm)
+                        pred_rf_flows, pred_flows, fps_pc1_idxs = net(points1_perm, points2_perm, feats1_perm, feats2_perm)
 
                     # forward
                     
@@ -187,9 +182,9 @@ def test_one_epoch(args, net, test_loader, rf_flow_factor, flow_factor, occ_fact
                     pred_mask_sum[:, perm, :] += pred_mask[0]
             else:
                 if use_rgb:
-                    pred_rf_flows, pred_flows, pred_mask, fps_pc1_idxs = net(pc1, pc2)
+                    pred_rf_flows, pred_flows, fps_pc1_idxs = net(pc1, pc2)
                 else:
-                    pred_rf_flows, pred_flows, pred_mask, fps_pc1_idxs = net(pc1, pc2, feats1, feats2)
+                    pred_rf_flows, pred_flows, fps_pc1_idxs = net(pc1, pc2, feats1, feats2)
                 # pred_flow_sum += pred_flows[0]
             
             pred_flow_sum /= repeat_num
@@ -202,17 +197,17 @@ def test_one_epoch(args, net, test_loader, rf_flow_factor, flow_factor, occ_fact
                 np_tgt = pc2.permute(0, 2, 1).squeeze(0).cpu().numpy()
                 gt = flow.squeeze(0).cpu().numpy()
                 np_flow = pred_rf_flows[0].cpu().detach().squeeze(0).numpy()
-                np_occ = pred_mask[0].cpu().detach().squeeze(0).numpy()
-                np_occ2 = pred_mask[1].cpu().detach().squeeze(0).numpy()
+                #np_occ = pred_mask[0].cpu().detach().squeeze(0).numpy()
+                #np_occ2 = pred_mask[1].cpu().detach().squeeze(0).numpy()
                 np_fps_idx1 = fps_pc1_idxs[0].cpu().detach().squeeze(0).numpy()
                 np_mask = mask.cpu().detach().squeeze(0).numpy()
-                np.savez('./results_kitti/' + name_fmt, pos1=np_src, pos2=np_tgt, flow=np_flow, gt=gt, occ_l0=np_occ, occ_l1=np_occ2, occ_gt=np_mask, idx= np_fps_idx1)
+                np.savez('./results_kitti/' + name_fmt, pos1=np_src, pos2=np_tgt, flow=np_flow, gt=gt, occ_gt=np_mask, idx= np_fps_idx1)
 
 
             # flow_pred = flow_pred * (1-bg_flag) + ego_flow * bg_flag 
 
-            rf_flow_loss, flow_loss, occ_loss, occ_acc = multiScaleLoss(pred_rf_flows, pred_flows, flow, pred_mask, mask, fps_pc1_idxs)
-            loss =  flow_factor * flow_loss + occ_factor * occ_loss
+            rf_flow_loss, flow_loss, occ_acc = multiScaleLoss(pred_rf_flows, pred_flows, flow, pred_mask, mask, fps_pc1_idxs)
+            loss =  flow_factor * flow_loss
 
             if repeat_num > 1:
                 rf_epe_3d, rf_acc_3d, rf_acc_3d_2, rf_outlier = scene_flow_metric_full(rf_pred_flow_sum.detach().cpu().numpy(), flow.transpose(2,1).contiguous().detach().cpu().numpy(), mask.detach().cpu().numpy())
@@ -282,8 +277,8 @@ def train_one_epoch(args, net, train_loader, opt, rf_flow_factor, flow_factor, o
             mask = mask1.cuda().squeeze(-1).contiguous()
 
             if use_rgb:
-                feats1 = data['sequence'][0]
-                feats2 = data['sequence'][1]
+                feats1 = data['sequence'][2]
+                feats2 = data['sequence'][3]
                 feats1 = feats1.cuda().squeeze(1).transpose(2, 1).contiguous()
                 feats2 = feats2.cuda().squeeze(1).transpose(2, 1).contiguous()
 
@@ -295,9 +290,9 @@ def train_one_epoch(args, net, train_loader, opt, rf_flow_factor, flow_factor, o
             else:
                 pred_rf_flows, pred_flows, pred_mask, fps_pc1_idxs = net(pc1, pc2, feats1, feats2)
             
-            rf_flow_loss, flow_loss, occ_loss, occ_acc = multiScaleLoss(pred_rf_flows, pred_flows, flow, pred_mask, mask, fps_pc1_idxs)
+            rf_flow_loss, flow_loss, = multiScaleLoss(pred_rf_flows, pred_flows, flow, pred_mask, mask, fps_pc1_idxs)
             # loss = rf_flow_factor * rf_flow_loss + flow_factor * flow_loss + occ_factor * occ_loss
-            loss = flow_factor * flow_loss + occ_factor * occ_loss
+            loss = flow_factor * flow_loss 
             # loss = torch.mean(mask1 * torch.sum((flow_pred - flow) ** 2, 1) / 2.0)
             loss.backward()
 
@@ -305,7 +300,7 @@ def train_one_epoch(args, net, train_loader, opt, rf_flow_factor, flow_factor, o
             total_loss += loss.item() * batch_size
             total_rf_flow_loss += rf_flow_loss.item() * batch_size
             total_flow_loss += flow_loss.item() * batch_size
-            total_occ_loss += occ_loss.item() * batch_size
+            # total_occ_loss += occ_loss.item() * batch_size
 
             if (i + 1) % step == 0:
                 epoch_cnt = epoch * np.round(data_size / step) + (i + 1) / step - 1
