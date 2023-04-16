@@ -165,32 +165,22 @@ class OccAwareNet(nn.Module):
 
         up_feat1_l3 = self.su_sa3(pc1_l3, pc1_l4, feat1_l3, feat1_l4)
         up_feat2_l3 = self.su_sa3(pc2_l3, pc2_l4, feat2_l3, feat2_l4)
- 
-        if pwc_cv:
-            c_feat_fwd_l3 = self.cv3(pc1_l3, pc2_l3, up_feat1_l3, up_feat2_l3)
-        else:
-            c_feat_fwd_l3, c_feat_bwd_l3, flow_feat_l3, flow_l3  = self.cv3([pc1_l3, up_feat1_l3, ind1_l3], [pc2_l3, up_feat2_l3, ind2_l3], sf_feat=up_feat1_l3)
+        c_feat_fwd_l3, c_feat_bwd_l3, flow_feat_l3, flow_l3  = self.cv3([pc1_l3, up_feat1_l3, ind1_l3], [pc2_l3, up_feat2_l3, ind2_l3], sf_feat=up_feat1_l3)
        
         up_feat1_l3_c = torch.cat([up_feat1_l3, c_feat_fwd_l3], dim=1)
         up_feat2_l3_c = torch.cat([up_feat2_l3, c_feat_bwd_l3], dim=1)
         up_feat1_l2 = self.su_sa2(pc1_l2, pc1_l3, feat1_l2, up_feat1_l3_c)
         up_feat2_l2 = self.su_sa2(pc2_l2, pc2_l3, feat2_l2, up_feat2_l3_c)
     
-       
         if nn_upsample:
             up_flow_feat_l3_2, up_flow_l3_2 = self.su_sf2([pc1_l2, up_feat1_l2, ind1_l2], [pc2_l2, up_feat2_l2, ind2_l2], [pc1_l3, up_feat1_l3, ind1_l3], flow_l3, flow_feat_l3)
         else:
             up_flow_l3_2 = self.upsample(pc1_l2, pc1_l3, flow_l3)
-                 
-        if pwc_cv:
-            c_feat_fwd_l2 = self.cv2(pc1_l2, pc2_l2, up_feat1_l2, up_feat2_l2)
-        else:
-            c_feat_fwd_l2, c_feat_bwd_l2, flow_feat_l2, flow_l2 = self.cv2([pc1_l2, up_feat1_l2, ind1_l2], [pc2_l2, up_feat2_l2, ind2_l2], up_flow_l3_2, up_flow_feat_l3_2)
+        c_feat_fwd_l2, c_feat_bwd_l2, flow_feat_l2, flow_l2 = self.cv2([pc1_l2, up_feat1_l2, ind1_l2], [pc2_l2, up_feat2_l2, ind2_l2], up_flow_l3_2, up_flow_feat_l3_2)
         
 
         up_feat1_l2_c = torch.cat([up_feat1_l2, c_feat_fwd_l2], dim=1)
         up_feat2_l2_c = torch.cat([up_feat2_l2, c_feat_bwd_l2], dim=1)
-        
         up_feat1_l1 = self.su_sa1(pc1_l1, pc1_l2, feat1_l1, up_feat1_l2_c)
         up_feat2_l1 = self.su_sa1(pc2_l1, pc2_l2, feat2_l1, up_feat2_l2_c)
         
@@ -198,27 +188,12 @@ class OccAwareNet(nn.Module):
             up_flow_feat_l2_1, up_flow_l2_1 = self.su_sf1([pc1_l1, up_feat1_l1, ind1_l1], [pc2_l1, up_feat2_l1, ind2_l1], [pc1_l2, up_feat1_l2, ind1_l2], flow_l2, flow_feat_l2)
         else:
             up_flow_l2_1 = self.upsample(pc1_l1, pc1_l2, flow_l2)
-            
-        if occ_net:
-            # time_start=time.time()
-            occ_mask_l1 = self.occnet1([[pc1_l3, up_feat1_l3, ind1_l3], [pc1_l2, up_feat1_l2, ind1_l2], [pc1_l1, up_feat1_l1, ind1_l1]], [[pc2_l3, up_feat2_l3, ind2_l3], [pc2_l2, up_feat2_l2, ind2_l2], [pc2_l1, up_feat2_l1, ind2_l1]], up_flow_l2_1)
-            # time_end=time.time()
-            # self.cv_time = self.cv_time + time_end - time_start
-        else:
-            occ_mask_l1 = torch.ones([pc1_l1.shape[0]*pc1_l1.shape[2],1]).to(pc1_l1.device)
+        # occ_mask_l1 = torch.ones([pc1_l1.shape[0]*pc1_l1.shape[2],1]).to(pc1_l1.device)
         # pc2_l1_warp = self.warping(pc1_l1, pc2_l1, up_flow_l2_1)
-            
-        if pwc_cv:
-            c_feat_fwd_l1 = self.cv1(pc1_l1, pc2_l1, up_feat1_l1, up_feat2_l1, occ_mask_l1)
-        else:
-            if occ_net:
-                c_feat_fwd_l1, c_feat_bwd_l1, flow_feat_l1, flow_l1 = self.cv1([pc1_l1, up_feat1_l1, ind1_l1], [pc2_l1, up_feat2_l1, ind2_l1], up_flow_l2_1, up_flow_feat_l2_1,  mask=occ_mask_l1)
-            else:
-                c_feat_fwd_l1, c_feat_bwd_l1, flow_feat_l1, flow_l1 = self.cv1([pc1_l1, up_feat1_l1, ind1_l1], [pc2_l1, up_feat2_l1, ind2_l1], up_flow_l2_1, up_flow_feat_l2_1)
+        c_feat_fwd_l1, c_feat_bwd_l1, flow_feat_l1, flow_l1 = self.cv1([pc1_l1, up_feat1_l1, ind1_l1], [pc2_l1, up_feat2_l1, ind2_l1], up_flow_l2_1, up_flow_feat_l2_1)
         
         up_feat1_l1_c = torch.cat([up_feat1_l1, c_feat_fwd_l1], dim=1)
         up_feat2_l1_c = torch.cat([up_feat2_l1, c_feat_bwd_l1], dim=1)
-        
         up_feat1_l0 = self.su_sa0(n_pc1, pc1_l1, feat1_l0, up_feat1_l1_c)
         up_feat2_l0 = self.su_sa0(n_pc2, pc2_l1, feat2_l0, up_feat2_l1_c)
         
@@ -230,22 +205,7 @@ class OccAwareNet(nn.Module):
             # self.su_time = self.su_time + time_end - time_start
         else:
             up_flow_l1_0 = self.upsample(n_pc1, pc1_l1, flow_l1)
-        
-        if occ_net:
-            # time_start=time.time()
-            occ_mask_l0 = self.occnet0([[pc1_l2, up_feat1_l2, ind1_l2], [pc1_l1, up_feat1_l1, ind1_l1], [n_pc1, up_feat1_l0, ind1]], [[pc2_l2, up_feat2_l2, ind2_l2], [pc2_l1, up_feat2_l1, ind2_l1], [n_pc2, up_feat2_l0, ind2]], up_flow_l1_0)
-            # time_end=time.time()
-            # self.occ_time = self.occ_time + time_end - time_start
-        else:
-            occ_mask_l0 = torch.ones([n_pc1.shape[0]*n_pc1.shape[2],1]).to(pc1_l1.device)
-            
-        if pwc_cv:
-            c_feat_l0 = self.cv0(n_pc1, n_pc2, up_feat1_l0, up_feat2_l0, occ_mask_l0)
-        else:
-            if occ_net:
-                _, _, _, flow_l0 = self.cv0([n_pc1, up_feat1_l0, ind1], [n_pc2, up_feat2_l0, ind2], up_flow_l1_0, up_flow_feat_l1_0, mask=occ_mask_l0)
-            else:
-                _, _, _, flow_l0 = self.cv0([n_pc1, up_feat1_l0, ind1], [n_pc2, up_feat2_l0, ind2], up_flow_l1_0, up_flow_feat_l1_0)
+        _, _, _, flow_l0 = self.cv0([n_pc1, up_feat1_l0, ind1], [n_pc2, up_feat2_l0, ind2], up_flow_l1_0, up_flow_feat_l1_0)
        
         time_end=time.time()
         self.total_time = self.total_time + time_end - time_start
@@ -259,10 +219,10 @@ class OccAwareNet(nn.Module):
         occ_mask_l1 = (occ_mask_l1.reshape(B, -1, 1).contiguous()).type(torch.float32)
         
         if N > 4096:
-            return [flow_l0, flow_l1, flow_l2], [flow_l0, flow_l1, flow_l2, flow_l3], [occ_mask_l0, occ_mask_l1], [fps_idx_l1, fps_idx_l2, fps_idx_l3]
+            return [flow_l0, flow_l1, flow_l2], [flow_l0, flow_l1, flow_l2, flow_l3], [fps_idx_l1, fps_idx_l2, fps_idx_l3]
         else:
             # return [rf_flow_l0, rf_flow_l1], [flow_l0, flow_l1, flow_l2, flow_l3], [occ_mask_l0, occ_mask_l1], [fps_idx_l1, fps_idx_l2, fps_idx_l3]
-            return [flow_l0, flow_l1], [flow_l0, flow_l1, flow_l2, flow_l3], [occ_mask_l0, occ_mask_l1], [fps_idx_l1, fps_idx_l2, fps_idx_l3]
+            return [flow_l0, flow_l1], [flow_l0, flow_l1, flow_l2, flow_l3], [fps_idx_l1, fps_idx_l2, fps_idx_l3]
         
 
 def multiScaleLoss(pred_rf_flows, pred_flows, gt_flow, pred_occ_masks, gt_occ_masks, fps_idxs, alpha=[0.02, 0.04, 0.08, 0.16], beta=[0.02, 0.04], occ_threshold=0.5):
