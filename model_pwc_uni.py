@@ -67,43 +67,19 @@ class OccAwareNet(nn.Module):
         self.su_sa2 = PointNetSetUpConv(nsample=16, radius=1.2, f1_channel = 128, f2_channel = 256+256, mlp=[128, 128], mlp2=[128, 128])
         # if nn_upsample:
         self.su_sf2 = SceneFlowUpsampleNet(nsample=5, num_levels=3, voxel_size=0.5, resolution=3.0, sf_channel=256, in_channel=128, hidden_channel=4, out_channel=128, use_voxel_mixer=use_voxel_mixer)
-        # if occ_net:
-        #     self.occnet2 = OcclusisonEstiamtionNet(nsample=16, voxel_size=0.25, resolution=3.0, in_channels=[512, 256, 256], num_levels=3, out_channel=256)
-        if pwc_cv:
-            self.cv2 = PointConvFlow(16, 128 + 128 + 3, [128, 128])
-        else:
-            self.cv2 = SceneFlowRegressor(nsample=16, in_channel=128, sfeat_channel=128, sf_channel=3, mid_channel=128, share_channel=share_channel, out_channel=128, channels=[128], mlp=[128, 128])
-        # self.sfnet2 = SceneFlowEstimatorPointConv(feat_ch=128, cost_ch=128, flow_ch=3, channels=[128, 128], mlp=[128, 128], share_planes=share_planes, neighbors=16, clamp=[-200, 200], use_leaky = True)
-        # self.sfnet2 = SceneFlowEstimatorResidual(feat_ch=128+128, cost_ch=128, flow_ch=3, neighbors=16, clamp=[-200, 200], use_leaky = True)
-        # self.refine_sfnet2 = SceneFlowFusionNet(nsample=5, f1_channel=128, f2_channel=256, mlp=[256,256], mlp2=[256,256], occ_threshold=0.5)
+        self.cv2 = SceneFlowRegressor(nsample=16, in_channel=128, sfeat_channel=128, sf_channel=3, mid_channel=128, share_channel=share_channel, out_channel=128, channels=[128], mlp=[128, 128])
         
         self.su_sa1 = PointNetSetUpConv(nsample=16, radius=0.6, f1_channel = 64, f2_channel = 128+128, mlp=[64, 64], mlp2=[64, 64])
-        # if nn_upsample:
+        
         self.su_sf1 = SceneFlowUpsampleNet(nsample=5, num_levels=3, voxel_size=0.25, resolution=3.0, sf_channel=128, in_channel=64, hidden_channel=4, out_channel=64, use_voxel_mixer=use_voxel_mixer)
-        # if occ_net:
-        self.occnet1 = OcclusisonEstiamtionNet(nsample=8, voxel_size=0.25, resolution=3.0, in_channels=[256, 128, 64], num_levels=3, out_channel=64)
-        if pwc_cv:
-            self.cv1 = PointConvFlow(16, 64 + 64 + 3, [64, 64])
-        else:
-            self.cv1 = SceneFlowRegressor(nsample=16, in_channel=64, sfeat_channel=64, sf_channel=3, mid_channel=64, share_channel=share_channel, out_channel=64, channels=[64], mlp=[64, 64])
-        # self.sfnet1 = SceneFlowEstimatorPointConv(feat_ch=64, cost_ch=64, flow_ch=3, channels=[64, 64], mlp=[128, 64, 64], share_planes=share_planes,
-        #                                           neighbors=16, clamp=[-200, 200], use_leaky = True)
-        # self.sfnet1 = SceneFlowEstimatorResidual(feat_ch=64+64, cost_ch=64, flow_ch=3, channels=[64, 64], mlp=[64, 64],                                   neighbors=8, clamp=[-200, 200], use_leaky = True)
-        # self.refine_sfnet1 = SceneFlowFusionNet(nsample=5, f1_channel=64, f2_channel=256, mlp=[256,256], mlp2=[256,256], occ_threshold=0.5)
+        self.cv1 = SceneFlowRegressor(nsample=16, in_channel=64, sfeat_channel=64, sf_channel=3, mid_channel=64, share_channel=share_channel, out_channel=64, channels=[64], mlp=[64, 64])
         
         self.su_sa0 = PointNetSetUpConv(nsample=16, radius=0.6, f1_channel = 32, f2_channel = 64+64, mlp=[64, 64], mlp2=[64, 64])
-        # if nn_upsample:
+       
         self.su_sf0 = SceneFlowUpsampleNet(nsample=8, num_levels=3, voxel_size=0.25, resolution=3.0, sf_channel=64, in_channel=64, hidden_channel=4, out_channel=64, use_voxel_mixer=use_voxel_mixer)
-        # if occ_net:
-        self.occnet0 = OcclusisonEstiamtionNet(nsample=8, voxel_size=0.25, resolution=3.0, in_channels=[128, 64, 64], num_levels=3, out_channel=64)
-        if pwc_cv:
-            self.cv0 = PointConvFlow(16, 64 + 64 + 3, [64, 64])
-        else:
-            self.cv0 = SceneFlowRegressor(nsample=16, in_channel=64, sfeat_channel=64, sf_channel=3, mid_channel=64, share_channel=share_channel, out_channel=64, channels=[64], mlp=[64, 64])
-        # self.sfnet0 = SceneFlowEstimatorPointConv(feat_ch=64, cost_ch=64, flow_ch=3, channels=[64, 64], mlp=[128, 64, 64], share_planes=share_planes,
-        #                                           neighbors=16, clamp=[-200, 200], use_leaky = True)
-        # self.sfnet0 = SceneFlowEstimatorResidual(feat_ch=64+64, cost_ch=64, flow_ch=3, channels=[64, 64], mlp=[64, 64],
-        #                                           neighbors=8, clamp=[-200, 200], use_leaky = True)
+        
+        self.cv0 = SceneFlowRegressor(nsample=16, in_channel=64, sfeat_channel=64, sf_channel=3, mid_channel=64, share_channel=share_channel, out_channel=64, channels=[64], mlp=[64, 64])
+                                                neighbors=8, clamp=[-200, 200], use_leaky = True)
 
     
         self.upsample = UpsampleFlow()
@@ -203,22 +179,13 @@ class OccAwareNet(nn.Module):
             c_feat_fwd_l3 = self.cv3(pc1_l3, pc2_l3, up_feat1_l3, up_feat2_l3)
         else:
             c_feat_fwd_l3, c_feat_bwd_l3, flow_feat_l3, flow_l3  = self.cv3([pc1_l3, up_feat1_l3, ind1_l3], [pc2_l3, up_feat2_l3, ind2_l3], sf_feat=up_feat1_l3)
-        # flow_feat_l3, flow_l3 = self.sfnet3(B, [pc1_l3, up_feat1_l3, ind1_l3], c_feat_fwd_l3)
-        # flow_feat_l3 = self.sf_sa(up_flow_l4_3)
-        # flow_feat_l3, flow_l3 = self.sfnet3(pc1_l3, torch.cat([up_flow_feat_l4_3,up_feat1_l3], dim=1), c_feat_l3, flow = up_flow_l4_3)
-        
+       
         up_feat1_l3_c = torch.cat([up_feat1_l3, c_feat_fwd_l3], dim=1)
         up_feat2_l3_c = torch.cat([up_feat2_l3, c_feat_bwd_l3], dim=1)
         up_feat1_l2 = self.su_sa2(pc1_l2, pc1_l3, feat1_l2, up_feat1_l3_c)
         up_feat2_l2 = self.su_sa2(pc2_l2, pc2_l3, feat2_l2, up_feat2_l3_c)
     
-        # c_feat_fwd_l3_2 = self.upsample(pc1_l2, pc1_l3, c_feat_fwd_l3)
-        # c_feat_fwd_l3_2 = self.deconv3_2(c_feat_fwd_l3_2)
-        # c_feat_bwd_l3_2 = self.upsample(pc2_l2, pc2_l3, c_feat_bwd_l3)
-        # c_feat_bwd_l3_2 = self.deconv3_2(c_feat_bwd_l3_2)
-        # c_feat_fwd_l3_2 = torch.cat([up_feat1_l2, c_feat_fwd_l3_2], dim=1)
-        # c_feat_bwd_l3_2 = torch.cat([up_feat2_l2, c_feat_bwd_l3_2], dim=1)   
-        
+       
         if nn_upsample:
             up_flow_feat_l3_2, up_flow_l3_2 = self.su_sf2([pc1_l2, up_feat1_l2, ind1_l2], [pc2_l2, up_feat2_l2, ind2_l2], [pc1_l3, up_feat1_l3, ind1_l3], flow_l3, flow_feat_l3)
         else:
@@ -228,22 +195,13 @@ class OccAwareNet(nn.Module):
             c_feat_fwd_l2 = self.cv2(pc1_l2, pc2_l2, up_feat1_l2, up_feat2_l2)
         else:
             c_feat_fwd_l2, c_feat_bwd_l2, flow_feat_l2, flow_l2 = self.cv2([pc1_l2, up_feat1_l2, ind1_l2], [pc2_l2, up_feat2_l2, ind2_l2], up_flow_l3_2, up_flow_feat_l3_2)
-        # flow_feat_l2, flow_l2 = self.sfnet2(B, [pc1_l2, up_flow_feat_l3_2, ind1_l2], c_feat_fwd_l2, flow = up_flow_l3_2)
-
+        
 
         up_feat1_l2_c = torch.cat([up_feat1_l2, c_feat_fwd_l2], dim=1)
         up_feat2_l2_c = torch.cat([up_feat2_l2, c_feat_bwd_l2], dim=1)
         
         up_feat1_l1 = self.su_sa1(pc1_l1, pc1_l2, feat1_l1, up_feat1_l2_c)
         up_feat2_l1 = self.su_sa1(pc2_l1, pc2_l2, feat2_l1, up_feat2_l2_c)
-        
-    
-        # c_feat_fwd_l2_1 = self.upsample(pc1_l1, pc1_l2, c_feat_fwd_l2)
-        # c_feat_fwd_l2_1 = self.deconv2_1(c_feat_fwd_l2_1)
-        # c_feat_bwd_l2_1 = self.upsample(pc2_l1, pc2_l2, c_feat_bwd_l2)
-        # c_feat_bwd_l2_1 = self.deconv2_1(c_feat_bwd_l2_1)
-        # c_feat_fwd_l2_1 = torch.cat([up_feat1_l1, c_feat_fwd_l2_1], dim=1)
-        # c_feat_bwd_l2_1 = torch.cat([up_feat2_l1, c_feat_bwd_l2_1], dim=1)
         
         if nn_upsample:
             up_flow_feat_l2_1, up_flow_l2_1 = self.su_sf1([pc1_l1, up_feat1_l1, ind1_l1], [pc2_l1, up_feat2_l1, ind2_l1], [pc1_l2, up_feat1_l2, ind1_l2], flow_l2, flow_feat_l2)
@@ -266,24 +224,12 @@ class OccAwareNet(nn.Module):
                 c_feat_fwd_l1, c_feat_bwd_l1, flow_feat_l1, flow_l1 = self.cv1([pc1_l1, up_feat1_l1, ind1_l1], [pc2_l1, up_feat2_l1, ind2_l1], up_flow_l2_1, up_flow_feat_l2_1,  mask=occ_mask_l1)
             else:
                 c_feat_fwd_l1, c_feat_bwd_l1, flow_feat_l1, flow_l1 = self.cv1([pc1_l1, up_feat1_l1, ind1_l1], [pc2_l1, up_feat2_l1, ind2_l1], up_flow_l2_1, up_flow_feat_l2_1)
-        # flow_feat_l1, flow_l1 = self.sfnet1(B, [pc1_l1, up_flow_feat_l2_1, ind1_l1], c_feat_fwd_l1, flow = up_flow_l2_1, mask=occ_mask_l1)
-        # flow_feat_l1 = self.sf_sa(up_flow_l2_1)
-        # flow_feat_l1, flow_l1 = self.sfnet1(pc1_l1, torch.cat([up_flow_feat_l2_1,up_feat1_l1], dim=1), c_feat_l1, flow = up_flow_l2_1)
-
         
         up_feat1_l1_c = torch.cat([up_feat1_l1, c_feat_fwd_l1], dim=1)
         up_feat2_l1_c = torch.cat([up_feat2_l1, c_feat_bwd_l1], dim=1)
         
         up_feat1_l0 = self.su_sa0(n_pc1, pc1_l1, feat1_l0, up_feat1_l1_c)
         up_feat2_l0 = self.su_sa0(n_pc2, pc2_l1, feat2_l0, up_feat2_l1_c)
-    
-        
-        # c_feat_fwd_l1_0 = self.upsample(n_pc1, pc1_l1, c_feat_fwd_l1)
-        # c_feat_fwd_l1_0 = self.deconv1_0(c_feat_fwd_l1_0)
-        # c_feat_bwd_l1_0 = self.upsample(n_pc2, pc2_l1, c_feat_bwd_l1)
-        # c_feat_bwd_l1_0 = self.deconv1_0(c_feat_bwd_l1_0)
-        # c_feat_fwd_l1_0 = torch.cat([up_feat1_l0, c_feat_fwd_l1_0], dim=1)
-        # c_feat_bwd_l1_0 = torch.cat([up_feat2_l0, c_feat_bwd_l1_0], dim=1)
         
         if nn_upsample:
             # time_start=time.time()
@@ -309,10 +255,7 @@ class OccAwareNet(nn.Module):
                 _, _, _, flow_l0 = self.cv0([n_pc1, up_feat1_l0, ind1], [n_pc2, up_feat2_l0, ind2], up_flow_l1_0, up_flow_feat_l1_0, mask=occ_mask_l0)
             else:
                 _, _, _, flow_l0 = self.cv0([n_pc1, up_feat1_l0, ind1], [n_pc2, up_feat2_l0, ind2], up_flow_l1_0, up_flow_feat_l1_0)
-        # _, flow_l0 = self.sfnet0(B, [n_pc1, up_flow_feat_l1_0, ind1], c_feat_l0, flow = up_flow_l1_0, mask=occ_mask_l0)
-        # flow_feat_l0 = self.sf_sa(up_flow_l1_0)
-        # _, flow_l0 = self.sfnet0(n_pc1, torch.cat([up_flow_feat_l1_0,up_feat1_l0], dim=1), c_feat_l0, flow = up_flow_l1_0)
-        
+       
         time_end=time.time()
         self.total_time = self.total_time + time_end - time_start
         print(self.total_time)
