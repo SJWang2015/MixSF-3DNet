@@ -57,27 +57,18 @@ class OccAwareNet(nn.Module):
         self.sa4 = PointNetSetAbstraction(npoint=128, radius=4.0, nsample=8, in_channel=256, mlp=[256,256,512], group_all=False)
         
         self.su_sa3 = PointNetSetUpConv(nsample=8, radius=2.4, f1_channel = 256, f2_channel = 512, mlp=[256, 256], mlp2=[256, 256])
-        if pwc_cv:
-            self.cv3 = PointConvFlow(8, 256 + 256 + 3, [256, 256])
-        else:
-            self.cv3 = SceneFlowRegressor(nsample=32, in_channel=256, sfeat_channel=256, sf_channel=0, mid_channel=256, share_channel=share_channel, out_channel=256, channels =[256], mlp=[256, 256])
-        # self.sfnet3 = SceneFlowEstimatorPointConv(feat_ch=256, cost_ch=256, flow_ch=0, channels =[256, 256], mlp=[128, 128], share_planes=share_planes,neighbors=8, clamp=[-200, 200], use_leaky = True)
-        # self.sfnet3 = SceneFlowEstimatorResidual(feat_ch=128+256, cost_ch=256, flow_ch=3, channels =[256, 256], mlp=[128, 128], neighbors=8, clamp=[-200, 200], use_leaky = True)
-        
+        self.cv3 = SceneFlowRegressor(nsample=32, in_channel=256, sfeat_channel=256, sf_channel=0, mid_channel=256, share_channel=share_channel, out_channel=256, channels =[256], mlp=[256, 256])
+       
         self.su_sa2 = PointNetSetUpConv(nsample=16, radius=1.2, f1_channel = 128, f2_channel = 256+256, mlp=[128, 128], mlp2=[128, 128])
-        # if nn_upsample:
         self.su_sf2 = SceneFlowUpsampleNet(nsample=5, num_levels=3, voxel_size=0.5, resolution=3.0, sf_channel=256, in_channel=128, hidden_channel=4, out_channel=128, use_voxel_mixer=use_voxel_mixer)
         self.cv2 = SceneFlowRegressor(nsample=16, in_channel=128, sfeat_channel=128, sf_channel=3, mid_channel=128, share_channel=share_channel, out_channel=128, channels=[128], mlp=[128, 128])
         
         self.su_sa1 = PointNetSetUpConv(nsample=16, radius=0.6, f1_channel = 64, f2_channel = 128+128, mlp=[64, 64], mlp2=[64, 64])
-        
         self.su_sf1 = SceneFlowUpsampleNet(nsample=5, num_levels=3, voxel_size=0.25, resolution=3.0, sf_channel=128, in_channel=64, hidden_channel=4, out_channel=64, use_voxel_mixer=use_voxel_mixer)
         self.cv1 = SceneFlowRegressor(nsample=16, in_channel=64, sfeat_channel=64, sf_channel=3, mid_channel=64, share_channel=share_channel, out_channel=64, channels=[64], mlp=[64, 64])
         
         self.su_sa0 = PointNetSetUpConv(nsample=16, radius=0.6, f1_channel = 32, f2_channel = 64+64, mlp=[64, 64], mlp2=[64, 64])
-       
         self.su_sf0 = SceneFlowUpsampleNet(nsample=8, num_levels=3, voxel_size=0.25, resolution=3.0, sf_channel=64, in_channel=64, hidden_channel=4, out_channel=64, use_voxel_mixer=use_voxel_mixer)
-        
         self.cv0 = SceneFlowRegressor(nsample=16, in_channel=64, sfeat_channel=64, sf_channel=3, mid_channel=64, share_channel=share_channel, out_channel=64, channels=[64], mlp=[64, 64])
                                                 neighbors=8, clamp=[-200, 200], use_leaky = True)
 
