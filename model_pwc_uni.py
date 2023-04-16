@@ -225,14 +225,14 @@ class OccAwareNet(nn.Module):
             return [flow_l0, flow_l1], [flow_l0, flow_l1, flow_l2, flow_l3], [fps_idx_l1, fps_idx_l2, fps_idx_l3]
         
 
-def multiScaleLoss(pred_rf_flows, pred_flows, gt_flow, pred_occ_masks, gt_occ_masks, fps_idxs, alpha=[0.02, 0.04, 0.08, 0.16], beta=[0.02, 0.04], occ_threshold=0.5):
+def multiScaleLoss(pred_rf_flows, pred_flows, gt_flow, fps_idxs, alpha=[0.02, 0.04, 0.08, 0.16], beta=[0.02, 0.04], occ_threshold=0.5):
     # num of scale
     num_scale = len(pred_flows)
     offset = len(fps_idxs) - num_scale + 1
     # offset = 0
-    occloss = nn.BCELoss()
+ 
     gt_flow = gt_flow.permute(0,2,1).contiguous()
-    gt_occ_masks = gt_occ_masks.unsqueeze(-1).contiguous()
+   
     # generate GT list and masks
     gt_flows = [gt_flow]
     gt_masks = [gt_occ_masks]
@@ -243,10 +243,10 @@ def multiScaleLoss(pred_rf_flows, pred_flows, gt_flow, pred_occ_masks, gt_occ_ma
         gt_flows.append(sub_gt_flow)
         gt_masks.append(sub_gt_mask)
 
-    occ_sum=0
+
     rf_flow_loss = torch.zeros(1).cuda()
     flow_loss = torch.zeros(1).cuda()
-    occ_loss = torch.zeros(1).cuda()
+#     occ_loss = torch.zeros(1).cuda()
     for i in range(num_scale):
         diff_flow = (pred_flows[i] - gt_flows[i + offset])
         # diff_mask = pred_occ_masks[i].permute(0, 2, 1) - gt_masks[i + offset]
@@ -258,15 +258,15 @@ def multiScaleLoss(pred_rf_flows, pred_flows, gt_flow, pred_occ_masks, gt_occ_ma
         # diff_mask = pred_occ_masks[i] - gt_masks[i + offset]
 
         # occ_loss += 1.4*alpha[i] * torch.norm(diff_mask, dim=2).sum(dim=1).mean()
-        occ_loss += beta[i] * occloss(pred_occ_masks[i], gt_masks[i + offset])
+#         occ_loss += beta[i] * occloss(pred_occ_masks[i], gt_masks[i + offset])
         rf_flow_loss += alpha[i] * torch.norm(diff_rf_flow*gt_masks[i + offset], dim=2).sum(dim=1).mean()
         
-    pred_occ_mask = pred_occ_masks[0] > occ_threshold
-    occ_acc = torch.mean((pred_occ_mask.type(torch.float32) - gt_masks[0].type(torch.float32)) ** 2)
-    occ_acc = 1.0 - occ_acc.item()
-    occ_sum += occ_acc
 
-    return rf_flow_loss, flow_loss, occ_loss, occ_sum
+#     occ_acc = torch.mean((pred_occ_mask.type(torch.float32) - gt_masks[0].type(torch.float32)) ** 2)
+#     occ_acc = 1.0 - occ_acc.item()
+#     occ_sum += occ_acc
+
+    return rf_flow_loss, flow_loss
 
 
 if __name__ == '__main__':
