@@ -210,8 +210,7 @@ class OccAwareNet(nn.Module):
         flow_l1 = flow_l1.transpose(1,2).contiguous()
         flow_l2 = flow_l2.transpose(1,2).contiguous()
         flow_l3 = flow_l3.transpose(1,2).contiguous()
-        occ_mask_l0 = (occ_mask_l0.reshape(B, -1, 1).contiguous()).type(torch.float32)
-        occ_mask_l1 = (occ_mask_l1.reshape(B, -1, 1).contiguous()).type(torch.float32)
+
         
         if N > 4096:
             return [flow_l0, flow_l1, flow_l2], [flow_l0, flow_l1, flow_l2, flow_l3], [fps_idx_l1, fps_idx_l2, fps_idx_l3]
