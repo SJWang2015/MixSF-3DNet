@@ -172,10 +172,8 @@ class OccAwareNet(nn.Module):
         up_feat1_l2 = self.su_sa2(pc1_l2, pc1_l3, feat1_l2, up_feat1_l3_c)
         up_feat2_l2 = self.su_sa2(pc2_l2, pc2_l3, feat2_l2, up_feat2_l3_c)
     
-        if nn_upsample:
-            up_flow_feat_l3_2, up_flow_l3_2 = self.su_sf2([pc1_l2, up_feat1_l2, ind1_l2], [pc2_l2, up_feat2_l2, ind2_l2], [pc1_l3, up_feat1_l3, ind1_l3], flow_l3, flow_feat_l3)
-        else:
-            up_flow_l3_2 = self.upsample(pc1_l2, pc1_l3, flow_l3)
+       
+        up_flow_feat_l3_2, up_flow_l3_2 = self.su_sf2([pc1_l2, up_feat1_l2, ind1_l2], [pc2_l2, up_feat2_l2, ind2_l2], [pc1_l3, up_feat1_l3, ind1_l3], flow_l3, flow_feat_l3)
         c_feat_fwd_l2, c_feat_bwd_l2, flow_feat_l2, flow_l2 = self.cv2([pc1_l2, up_feat1_l2, ind1_l2], [pc2_l2, up_feat2_l2, ind2_l2], up_flow_l3_2, up_flow_feat_l3_2)
         
 
@@ -184,10 +182,8 @@ class OccAwareNet(nn.Module):
         up_feat1_l1 = self.su_sa1(pc1_l1, pc1_l2, feat1_l1, up_feat1_l2_c)
         up_feat2_l1 = self.su_sa1(pc2_l1, pc2_l2, feat2_l1, up_feat2_l2_c)
         
-        if nn_upsample:
-            up_flow_feat_l2_1, up_flow_l2_1 = self.su_sf1([pc1_l1, up_feat1_l1, ind1_l1], [pc2_l1, up_feat2_l1, ind2_l1], [pc1_l2, up_feat1_l2, ind1_l2], flow_l2, flow_feat_l2)
-        else:
-            up_flow_l2_1 = self.upsample(pc1_l1, pc1_l2, flow_l2)
+        
+        up_flow_feat_l2_1, up_flow_l2_1 = self.su_sf1([pc1_l1, up_feat1_l1, ind1_l1], [pc2_l1, up_feat2_l1, ind2_l1], [pc1_l2, up_feat1_l2, ind1_l2], flow_l2, flow_feat_l2)
         # occ_mask_l1 = torch.ones([pc1_l1.shape[0]*pc1_l1.shape[2],1]).to(pc1_l1.device)
         # pc2_l1_warp = self.warping(pc1_l1, pc2_l1, up_flow_l2_1)
         c_feat_fwd_l1, c_feat_bwd_l1, flow_feat_l1, flow_l1 = self.cv1([pc1_l1, up_feat1_l1, ind1_l1], [pc2_l1, up_feat2_l1, ind2_l1], up_flow_l2_1, up_flow_feat_l2_1)
@@ -197,16 +193,15 @@ class OccAwareNet(nn.Module):
         up_feat1_l0 = self.su_sa0(n_pc1, pc1_l1, feat1_l0, up_feat1_l1_c)
         up_feat2_l0 = self.su_sa0(n_pc2, pc2_l1, feat2_l0, up_feat2_l1_c)
         
-        if nn_upsample:
-            # time_start=time.time()
-            # _, up_flow_l1_0 = self.su_sf0([n_pc1, up_feat1_l0, ind1], [n_pc2, up_feat2_l0, ind2], [pc1_l1, up_feat1_l1, ind1_l1], rf_flow_l1, flow_feat_l1)
-            up_flow_feat_l1_0, up_flow_l1_0 = self.su_sf0([n_pc1, up_feat1_l0, ind1], [n_pc2, up_feat2_l0, ind2], [pc1_l1, up_feat1_l1, ind1_l1], flow_l1, flow_feat_l1)
-            # time_end=time.time()
-            # self.su_time = self.su_time + time_end - time_start
-        else:
-            up_flow_l1_0 = self.upsample(n_pc1, pc1_l1, flow_l1)
+        
+        # time_start=time.time()
+        # _, up_flow_l1_0 = self.su_sf0([n_pc1, up_feat1_l0, ind1], [n_pc2, up_feat2_l0, ind2], [pc1_l1, up_feat1_l1, ind1_l1], rf_flow_l1, flow_feat_l1)
+        up_flow_feat_l1_0, up_flow_l1_0 = self.su_sf0([n_pc1, up_feat1_l0, ind1], [n_pc2, up_feat2_l0, ind2], [pc1_l1, up_feat1_l1, ind1_l1], flow_l1, flow_feat_l1)
+        # time_end=time.time()
+        # self.su_time = self.su_time + time_end - time_start
+    
         _, _, _, flow_l0 = self.cv0([n_pc1, up_feat1_l0, ind1], [n_pc2, up_feat2_l0, ind2], up_flow_l1_0, up_flow_feat_l1_0)
-       
+    
         time_end=time.time()
         self.total_time = self.total_time + time_end - time_start
         print(self.total_time)
