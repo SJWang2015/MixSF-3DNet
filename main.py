@@ -169,11 +169,15 @@ def test_one_epoch(args, net, test_loader, rf_flow_factor, flow_factor, occ_fact
                     points1_perm = pc1[:, :, perm]
                     points2_perm = pc2[:, :, perm]
                     if use_rgb:
-                        feats1_perm = pc1[:, :, perm]
-                        feats2_perm = pc2[:, :, perm]
-                        pred_rf_flows, pred_flows, fps_pc1_idxs = net(points1_perm, points2_perm)
-                    else:
+                        feats1 = data['sequence'][2]
+                        feats2 = data['sequence'][3]
+                        feats1 = feats1.cuda().squeeze(1).transpose(2, 1).contiguous()
+                        feats2 = feats2.cuda().squeeze(1).transpose(2, 1).contiguous()
+                        feats1_perm = feats1[:, :, perm]
+                        feats2_perm = feats2[:, :, perm]
                         pred_rf_flows, pred_flows, fps_pc1_idxs = net(points1_perm, points2_perm, feats1_perm, feats2_perm)
+                    else:
+                        pred_rf_flows, pred_flows, fps_pc1_idxs = net(points1_perm, points2_perm, points1_perm, points2_perm)
 
                     # forward
                     
@@ -182,8 +186,12 @@ def test_one_epoch(args, net, test_loader, rf_flow_factor, flow_factor, occ_fact
                     pred_mask_sum[:, perm, :] += pred_mask[0]
             else:
                 if use_rgb:
-                    pred_rf_flows, pred_flows, fps_pc1_idxs = net(pc1, pc2)
+                    pred_rf_flows, pred_flows, fps_pc1_idxs = net(pc1, pc2, pc1, pc2)
                 else:
+                    feats1 = data['sequence'][2]
+                    feats2 = data['sequence'][3]
+                    feats1 = feats1.cuda().squeeze(1).transpose(2, 1).contiguous()
+                    feats2 = feats2.cuda().squeeze(1).transpose(2, 1).contiguous()
                     pred_rf_flows, pred_flows, fps_pc1_idxs = net(pc1, pc2, feats1, feats2)
                 # pred_flow_sum += pred_flows[0]
             
@@ -286,7 +294,7 @@ def train_one_epoch(args, net, train_loader, opt, rf_flow_factor, flow_factor, o
             opt.zero_grad()
             num_examples += batch_size
             if use_rgb:
-                pred_rf_flows, pred_flows, pred_mask, fps_pc1_idxs = net(pc1, pc2)
+                pred_rf_flows, pred_flows, pred_mask, fps_pc1_idxs = net(pc1, pc2, pc1, pc2)
             else:
                 pred_rf_flows, pred_flows, pred_mask, fps_pc1_idxs = net(pc1, pc2, feats1, feats2)
             
