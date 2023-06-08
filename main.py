@@ -15,6 +15,8 @@ from datasets.generic import Batch
 
 from model_pwc_uni import OccAwareNet, multiScaleLoss
 model_name = 'model_pwc_uni.py'
+# from model_pwc_uni_occ import OccAwareNet, multiScaleLoss
+# model_name = 'model_pwc_uni_occ.py'
 import numpy as np 
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
