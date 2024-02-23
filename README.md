@@ -20,7 +20,25 @@ To evaluate the model, simply execute the shell script `cmd_eval_ft3d.sh`.
 sh cmd_eval_ft3d.sh
 ```
 
+## Citation
+If you use this code for academic research, you are highly encouraged to cite the following paper:
+
+```latex
+
+@article{wang20233dsf,
+  title={3DSF-MixNet: Mixer-Based Symmetric Scene Flow Estimation From 3D Point Clouds},
+  author={Wang, Shuaijun and Gao, Rui and Han, Ruihua and Hao, Qi},
+  journal={IEEE Robotics and Automation Letters},
+  volume={9},
+  number={1},
+  pages={611--618},
+  year={2023},
+  publisher={IEEE}
+}
+
 
 ### License
 Our code is released under MIT License (see LICENSE file for details).
+
+
 
