@@ -20,7 +20,7 @@ To evaluate the model, simply execute the shell script `cmd_eval_ft3d.sh`.
 sh cmd_eval_ft3d.sh
 ```
 
-## Citation
+### Citation
 If you use this code for academic research, you are highly encouraged to cite the following paper:
 
 ```latex
@@ -35,10 +35,6 @@ If you use this code for academic research, you are highly encouraged to cite th
   year={2023},
   publisher={IEEE}
 }
-
-
+```
 ### License
 Our code is released under MIT License (see LICENSE file for details).
-
-
-
